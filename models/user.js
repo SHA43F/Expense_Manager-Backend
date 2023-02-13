@@ -44,10 +44,36 @@ UserSchema.methods.deleteCartItem = function (prodId) {
   const updatedCartItems = this.cart.items.filter(
     (item) => item.productId.toString() !== prodId.toString()
   );
-  // const updatedCart = {
-  //   items: updatedCartItems
-  // };
   this.cart.items = updatedCartItems;
+  return this.save();
+};
+
+UserSchema.methods.addOrder = () => {
+  const db = getDb();
+  return this.getCart()
+    .then((products) => {
+      const order = {
+        items: products,
+        user: {
+          _id: new ObjectId(this._id),
+          userName: this.userName
+        }
+      };
+      return db.collection("orders").insertOne(order);
+    })
+    .then((result) => {
+      this.cart.items = [];
+      return db
+        .collection("users")
+        .updateOne(
+          { _id: new ObjectId(this._id) },
+          { $set: { cart: { items: [] } } }
+        );
+    });
+};
+
+UserSchema.methods.clearCart = function () {
+  this.cart.items = [];
   return this.save();
 };
 
