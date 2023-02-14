@@ -1,0 +1,9 @@
+{
+  "env": {
+    "BUCKET_NAME": "expensetracker98",
+    "IAM_USER_KEY": "AKIAUAEFAKMYEYYY52H4",
+    "ACCESS_SECRET_KEY": "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",
+    "KEY_ID": "rzp_test_Fqy2PX3U98ZCp7",
+    "KEY_SECRET": "r09kkiAXOvkhDCeEAFaoAo9t"
+  }
+}

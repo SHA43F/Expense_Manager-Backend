@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Expense Tracker</title>
+    <style>
+      body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .signIn {
+        margin-top: 2vh;
+        width: 95%;
+        max-width: 25rem;
+        border-radius: 6px;
+        padding: 1rem;
+        text-align: center;
+        background-color: lightblue;
+      }
+      button {
+        color: #fff;
+        background-color: rgb(204, 169, 12);
+        border-color: transparent;
+        padding: 10px 15px;
+        display: inline-block;
+        border-radius: 5px;
+        margin: 5px;
+      }
+      button:hover {
+        background-color: rgb(204, 102, 12);
+      }
+      a {
+        text-decoration: none;
+        padding: 10px;
+        color: black;
+      }
+      a:hover {
+        color: rgb(232, 56, 56);
+      }
+      input {
+        border-color: transparent;
+        border-radius: 5px;
+        padding: 10px;
+        margin: 3px;
+      }
+      ul {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        border-width: 3px;
+        background-color: #fde8e8;
+        padding: 15px;
+        border-radius: 20px;
+      }
+      li {
+        display: flex;
+        align-items: center;
+        flex-direction: row;
+      }
+      header {
+        position: relative;
+        display: flex;
+        width: 100%;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h2>Expense Tracker</h2>
+      <button id="logoutId">Logout</button>
+    </header>
+    <form
+      action="/expense"
+      method="POST"
+      onsubmit="postExpense(event)"
+      class="signIn"
+    >
+      <div>
+        <input
+          type="text"
+          id="descriptionId"
+          name="description"
+          placeholder="Description"
+          required
+        />
+      </div>
+      <div>
+        <label for="category">Category:</label>
+        <select title="category" id="categoryId" name="category">
+          <option value="Food">Food</option>
+          <option value="Grocery">Grocery</option>
+          <option value="Bills">Bills</option>
+          <option value="Fuel">Fuel</option>
+          <option value="Salary">Salary</option>
+        </select>
+      </div>
+      <div>
+        <input
+          type="radio"
+          id="incomeId"
+          title="income"
+          name="incomeExpense"
+          value="Income"
+        />
+        <label for="income">Income</label>
+        <input
+          type="radio"
+          id="expenseId"
+          title="expense"
+          name="incomeExpense"
+          value="Expense"
+          checked
+        />
+        <label for="expense">Expense</label>
+      </div>
+      <div>
+        <input
+          type="number"
+          id="amountId"
+          name="amount"
+          placeholder="Amount"
+          required
+        />
+      </div>
+      <div>
+        <button type="submit">Add Expense</button>
+      </div>
+    </form>
+    <div id="premium">
+      <p>You are a premium user now</p>
+      <button id="leaderboardId">Show Leaderboard</button>
+      <button id="expenditureId">Monthly Expenditure</button>
+    </div>
+    <button id="premiumId">Activate Premium</button>
+    <div>
+      <label for="rowsPerPage">Rows per page:</label>
+      <select
+        onchange="setRowsPerPage()"
+        title="rowsPerPage"
+        id="rowsPerPageId"
+        name="rowsPerPage"
+      >
+        <option value="2">2</option>
+        <option value="5">5</option>
+        <option value="10">10</option>
+      </select>
+    </div>
+
+    <ul id="expenseItemsId"></ul>
+    <div id="paginationId"></div>
+    <ul id="leaderboard"></ul>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.3.3/axios.min.js"></script>
+    <script>
+      window.addEventListener("DOMContentLoaded", (event) => {
+        event.preventDefault();
+        let page = new URLSearchParams(window.location.search).get("page");
+        let innerBlock;
+        const retrievedToken = localStorage.getItem("token");
+        let rowsValueShow = localStorage.getItem("rowsValue");
+        if (!rowsValueShow) {
+          rowsValueShow = 5;
+        }
+        console.log(rowsValueShow);
+        document.getElementById("rowsPerPageId").value = rowsValueShow;
+
+        axios
+          .get("http://localhost:3000/expenses", {
+            headers: { Auth: retrievedToken }
+          })
+          .then((response) => {
+            const expensesLength = response.data.expenses.length;
+            if (response.data.isPremiumUser) {
+              document.getElementById("premiumId").outerHTML = "";
+            } else {
+              document.getElementById("premium").outerHTML = "";
+            }
+            if (expensesLength === 0) {
+              const expenseItems = document.getElementById("expenseItemsId");
+              expenseItems.outerHTML =
+                "<h3>No expense found, Please add one..</h3>";
+            }
+            if (page == null) {
+              page = 1;
+            }
+            for (
+              let index = rowsValueShow * (page - 1);
+              index < page * rowsValueShow;
+              index += 1
+            ) {
+              if (index >= expensesLength) {
+                break;
+              }
+              displayExpenseItems(response.data.expenses[index]);
+            }
+            for (
+              let index = 1;
+              index <= Math.ceil(expensesLength / rowsValueShow);
+              index += 1
+            ) {
+              displaypagination(index);
+            }
+          })
+          .then(() => {
+            axios.get("http://localhost:3000/expense", {
+              headers: { Auth: retrievedToken }
+            });
+          })
+          .catch((err) => {
+            console.log(err);
+          });
+      });
+      const displayExpenseItems = (expense) => {
+        const retrievedToken = localStorage.getItem("token");
+        const expampleId = document.getElementById("expenseItemsId");
+        innerBlock = `<li>Description: ${expense.description} Category: ${expense.category} amount: ${expense.amount}
+          <form action="/deleteExpense" method="POST">
+            <input id="expenseInputId" type="hidden" value="${expense._id}" name="expenseId" ></input>
+            <input id="tokenId" type="hidden" value="${retrievedToken}" name="tokenId" ></input>
+            <button type="submit">Delete</button>
+          </form>
+          </li>`;
+        expampleId.innerHTML += innerBlock;
+      };
+
+      const displaypagination = (index) => {
+        const paginationId = document.getElementById("paginationId");
+        innerBlock = `<a href="/expense/?page=${index}">${index}</a>`;
+        paginationId.innerHTML += innerBlock;
+      };
+
+      const setRowsPerPage = () => {
+        const rowsValue = document.getElementById("rowsPerPageId").value;
+        console.log(rowsValue);
+        window.location.href = window.location.href;
+        localStorage.setItem("rowsValue", rowsValue);
+      };
+
+      const postExpense = (event) => {
+        const retrievedToken = localStorage.getItem("token");
+        event.preventDefault(event);
+        const obj = {
+          description: event.target.description.value,
+          category: event.target.category.value,
+          amount: event.target.amount.value,
+          token: retrievedToken,
+          incomeExpense: event.target.incomeExpense.value
+        };
+        console.log(obj);
+        axios.post("http://localhost:3000/expense", obj).then(() => {
+          window.location.href = "http://localhost:3000/expense";
+        });
+      };
+
+      document.getElementById("leaderboardId").onclick = async function (
+        event
+      ) {
+        const response = await axios.get("http://localhost:3000/leaderboard");
+        const expampleId = document.getElementById("leaderboard");
+        response.data.map((user) => {
+          innerBlock = `<li>Name: ${user.userName} Total Expense: ${user.totalAmount}</li>`;
+          expampleId.innerHTML = expampleId.innerHTML + innerBlock;
+        });
+      };
+
+      document.getElementById("logoutId").onclick = async function(){
+      localStorage.removeItem("token")
+      localStorage.removeItem("rowsValue")
+      window.location.href = "http://localhost:3000/signIn"
+      }
+
+      document.getElementById("expenditureId").onclick = async function (
+        event
+      ) {
+        event.preventDefault();
+        const retrievedToken = localStorage.getItem("token");
+        const response = await axios.get("http://localhost:3000/expenses", {
+          headers: { Auth: retrievedToken }
+        });
+
+        if (response.data.isPremiumUser) {
+          window.location.href = "http://localhost:3000/expenditure";
+        } else {
+          window.location.href = "http://localhost:3000/expenditureError";
+        }
+      };
+
+      document.getElementById("premiumId").onclick = async function (event) {
+        const token = localStorage.getItem("token");
+        console.log("premium button");
+        const response = await axios.get("http://localhost:3000/premium", {
+          headers: { Auth: token }
+        });
+        console.log("response:", response);
+        var options = {
+          key: response.data.key_id,
+          order_id: response.data.order.id,
+          handler: async function (response) {
+            const res = await axios.post(
+              "http://localhost:3000/updateStatus",
+              {
+                order_id: options.order_id,
+                payment_id: response.razorpay_payment_id
+              },
+              {
+                headers: { Auth: token }
+              }
+            );
+            alert("You are a Premium User Now");
+            window.location.href = "http://localhost:3000/expense";
+            localStorage.setItem("token", res.data.token);
+          }
+        };
+        const rzp1 = new Razorpay(options);
+        rzp1.open();
+        event.preventDefault();
+        rzp1.on("payment.failed", function (response) {
+          console.log(response);
+          const res = axios.post(
+            "http://localhost:3000/updateStatus",
+            {
+              order_id: options.order_id,
+              payment_id: response.razorpay_payment_id
+            },
+            { headers: { Auth: token } }
+          );
+          alert("Payment failed");
+        });
+      };
+    </script>
+  </body>
+</html>

@@ -1,53 +1,47 @@
-const path = require("path");
-
 const express = require("express");
 const bodyParser = require("body-parser");
+const cors = require("cors");
+const morgan = require("morgan");
+const fs = require("fs");
+const path = require("path");
+
+const signUpRouter = require("./routes/signUpRouter");
+const signInRouter = require("./routes/signInRouter");
+const expenseRouter = require("./routes/expenseRouter");
+const purchaseRouter = require("./routes/purchaseRouter");
+const forgotPasswordRouter = require("./routes/forgotPasswordRouter");
+const premiumFeatureRouter = require("./routes/premiumFeatureRouter");
 
 const mongoose = require("mongoose");
 
-const errorController = require("./controllers/error");
-const User = require("./models/user");
-
 const app = express();
+app.use(cors());
 
-app.set("view engine", "ejs");
-app.set("views", "views");
+const loggingInfo = fs.createWriteStream(
+  path.join(__dirname, "loggingInfo.log"),
+  {
+    flags: "a"
+  }
+);
 
-const adminRoutes = require("./routes/admin");
-const shopRoutes = require("./routes/shop");
+app.use(morgan("combined", { stream: loggingInfo }));
 
 app.use(bodyParser.urlencoded({ extended: false }));
-app.use(express.static(path.join(__dirname, "public")));
 
-app.use((req, res, next) => {
-  User.findById("63ea166b9ad49f4f05336972")
-    .then((user) => {
-      req.user = user;
-      next();
-    })
-    .catch((err) => console.log(err));
-});
+app.use(express.json());
 
-app.use("/admin", adminRoutes);
-app.use(shopRoutes);
-
-app.use(errorController.get404);
+app.use(signUpRouter);
+app.use(signInRouter);
+app.use(expenseRouter);
+app.use(purchaseRouter);
+app.use(forgotPasswordRouter);
+app.use(premiumFeatureRouter);
 
 mongoose
   .connect(
-    "mongodb+srv://User1:QSrhkDnwvJJ9j9zF@cluster0.5ai12dw.mongodb.net/shop?retryWrites=true&w=majority"
+    "mongodb+srv://User1:confidential@cluster0.5ai12dw.mongodb.net/expense-tracker?retryWrites=true&w=majority"
   )
-  .then(() => {
-    User.findOne().then((user) => {
-      if (!user) {
-        const user = new User({
-          userName: "Shareef",
-          email: "shareef@email.com",
-          cart: { items: [] }
-        });
-        user.save();
-      }
-    });
-    app.listen(3000);
-  })
-  .catch((error) => console.log(error));
+  .then(() => app.listen(3000))
+  .catch((err) => {
+    console.log(err);
+  });
