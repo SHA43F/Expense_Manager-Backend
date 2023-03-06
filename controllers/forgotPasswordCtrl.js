@@ -1,69 +1,52 @@
-const path = require("path");
 const bcrypt = require("bcrypt");
 const Users = require("../modals/users");
-const rootDir = require("../util/rootDir");
 const forgotPassword = require("../modals/forgotPassword");
 
-exports.getForgotPasswordData = (req, res, next) => {
-  res.sendFile(path.join(rootDir, "views", "forgotPassword.html"));
-};
-
-exports.postForgotData = async (req, res, next) => {
+exports.postForgotData = async (req, res) => {
   try {
     const user = await Users.findOne({ email: req.body.email });
+
     if (user) {
       const forgotP = new forgotPassword({
         user: { userId: user._id, userName: user.userName },
         isActive: true
       });
+
       forgotP.save().then((response) => {
-        console.log(response);
         const id = response._id.toString();
-        res.redirect(`/resetPassword/${id}`);
+        res.status(201).json({ id: id });
       });
     } else {
       throw new Error("User Not Found.");
     }
   } catch (err) {
-    console.log(err);
+    res.status(404).json({ message: err });
   }
 };
 
-exports.resetPassword = async (req, res, next) => {
-  const resetId = req.params.resetId;
-  try {
-    const resetPasswordRow = await forgotPassword.findById(resetId);
-    if (!!resetPasswordRow.isActive) {
-      res
-        .status(201)
-        .sendFile(path.join(rootDir, "views", "resetPassword.html"));
-    } else {
-      console.log("No reset");
-    }
-  } catch (error) {
-    console.log(error);
-  }
-};
-
-exports.postPasswordData = async (req, res, next) => {
-  const { password, confirmPassword, resetId } = req.body;
+exports.postPasswordData = async (req, res) => {
+  const { password, resetId } = req.body;
   const resetPasswordRow = await forgotPassword.findById(resetId);
-  console.log(password, confirmPassword, resetId, resetPasswordRow);
+
   try {
-    const user = await Users.findById(resetPasswordRow.user.userId);
-    if (user) {
-      bcrypt.hash(password, 10, async (err, hash) => {
-        console.log(hash);
-        try {
-          await Users.findByIdAndUpdate(user._id, { password: hash });
-          await forgotPassword.findByIdAndDelete(resetId);
-          res.redirect("/signIn");
-        } catch (error) {
-          console.log(error);
-        }
-      });
+    if (!!resetPasswordRow.isActive) {
+      const user = await Users.findById(resetPasswordRow.user.userId);
+
+      if (user) {
+        bcrypt.hash(password, 10, async (error, hash) => {
+          try {
+            await Users.findByIdAndUpdate(user._id, { password: hash });
+            await forgotPassword.findByIdAndDelete(resetId);
+            res.status(201).json({ message: "Successfull password reset." });
+          } catch (error) {
+            res.status(400).json({ message: error });
+          }
+        });
+      }
+    } else {
+      throw new Error("Password Reset has expired.");
     }
   } catch (error) {
-    console.log(error);
+    res.status(400).json({ message: error });
   }
 };

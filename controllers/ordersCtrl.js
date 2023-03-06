@@ -2,16 +2,17 @@ const RazorPay = require("razorpay");
 const Orders = require("../modals/orders");
 const jwt = require("jsonwebtoken");
 const Users = require("../modals/users");
+require("dotenv").config();
 
 function generateAccessToken(id, userName) {
   return jwt.sign({ userId: id, userName: userName }, "secret-key");
 }
 
-exports.postOrders = (req, res, next) => {
+exports.postOrders = (req, res) => {
   try {
     var razor = new RazorPay({
-      key_id: "confidential",
-      key_secret: "confidential"
+      key_id: process.env.RAZOR_ID,
+      key_secret: process.env.RAZOR_KEY
     });
     const amount = 2500;
     razor.orders.create({ amount: amount, currency: "INR" }, (err, order) => {
@@ -32,7 +33,6 @@ exports.postOrders = (req, res, next) => {
         });
     });
   } catch (err) {
-    console.log("Something went wrong");
     console.log(err);
   }
 };
@@ -80,9 +80,6 @@ exports.updateOrders = async (req, res, next) => {
             message: "Transaction Successful",
             token: generateAccessToken(userId, undefined, true)
           });
-        })
-        .then(() => {
-          res.redirect("/expense");
         })
         .catch((err) => {
           console.log(err);

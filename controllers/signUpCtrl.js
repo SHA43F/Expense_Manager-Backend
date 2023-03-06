@@ -1,32 +1,26 @@
-const path = require("path");
-const rootDir = require("../util/rootDir");
 const Users = require("../modals/users");
 const bcrypt = require("bcrypt");
 
-exports.getSignUpData = (req, res, next) => {
-  res.sendFile(path.join(rootDir, "views", "signUp.html"));
-};
+exports.postSignUpData = (req, res) => {
+  const { userName, email, password } = req.body;
 
-exports.postSignUpData = async (req, res, next) => {
   try {
-    const { userName, email, password } = req.body;
-    bcrypt.hash(password, 10, async (err, hash) => {
+    bcrypt.hash(password, 10, (err, hash) => {
       const user = new Users({
         userName: userName,
         email: email,
         password: hash
       });
-      await user
+      user
         .save()
         .then(() => {
-          res.redirect("/signIn");
+          return res.status(200).json({ response: "Successful" });
         })
         .catch((err) => {
-          console.log(err);
-          res.send(`<p>${err}</p>`);
+          res.status(400).json({ response: err });
         });
     });
   } catch (err) {
-    console.log(err);
+    res.status(400).json({ response: err });
   }
 };

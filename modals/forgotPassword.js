@@ -11,16 +11,3 @@ const FP = new Schema({
 
 module.exports = mongoose.model("ForgotPassword", FP);
 
-// const Sequelize = require("sequelize");
-// const sequelize = require("../database/database");
-
-// const FP = sequelize.define("forgotPswd", {
-//   id: {
-//     type: Sequelize.UUID,
-//     allowNull: false,
-//     primaryKey: true
-//   },
-//   isActive: Sequelize.BOOLEAN
-// });
-
-// module.exports = FP;
